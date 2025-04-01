@@ -36,7 +36,7 @@ for index in sorted(results.keys()):
     data.append({"数组下标 i": index, "平均访问时间": round(avg_time, 2), "样本数": len(times)})
 
 df = pd.DataFrame(data)
-pritn(df)
+print(df)
 
 # 打印结果表格
-print(df.to_csv('cachetime.csv', index = False)
+print(df.to_csv('cachetime.csv', index = False))
