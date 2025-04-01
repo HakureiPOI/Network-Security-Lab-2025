@@ -10,7 +10,7 @@ RUNS = 10
 results = defaultdict(list)
 
 # 正则匹配输出
-pattern = re.compile(r"访问 array\[(\d+)\*4096\] 的时间: (\d+) 个CPU周期")
+pattern = re.compile(r"Access time for array[(\d+)\*4096\]: (\d+) CPU cycles")
 
 print(f"开始执行 CacheTime 程序 {RUNS} 次...\n")
 
