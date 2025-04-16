@@ -21,10 +21,14 @@ $hashed_pwd = sha1($input_pwd);
 // create a connection
 $conn = getDB();
 
-// do the query
-$result = $conn->query("SELECT id, name, eid, salary, ssn
+// 使用 prepared statement 防止 SQL 注入
+$stmt = $conn->prepare("SELECT id, name, eid, salary, ssn
                         FROM credential
-                        WHERE name= '$input_uname' and Password= '$hashed_pwd'");
+                        WHERE name = ? AND Password = ?");
+$stmt->bind_param("ss", $input_uname, $hashed_pwd);
+$stmt->execute();
+$result = $stmt->get_result();
+
 if ($result->num_rows > 0) {
   // only take the first row 
   $firstrow = $result->fetch_assoc();
@@ -36,5 +40,6 @@ if ($result->num_rows > 0) {
 }
 
 // close the sql connection
+$stmt->close();
 $conn->close();
 ?>
